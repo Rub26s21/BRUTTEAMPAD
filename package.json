@@ -1,0 +1,81 @@
+{
+  "name": "brutsteampad",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Collaborative real-time document editor for students, small teams, and developers",
+  "keywords": [
+    "collaboration",
+    "realtime",
+    "editor",
+    "crdt",
+    "yjs",
+    "tiptap",
+    "nextjs"
+  ],
+  "author": "BRUTSTeamPad Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/brutsteampad.git"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "db:migrate": "node scripts/migrate.mjs",
+    "ws:server": "node src/server/websocket.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "@tiptap/core": "^2.6.0",
+    "@tiptap/extension-bold": "^2.6.0",
+    "@tiptap/extension-bullet-list": "^2.6.0",
+    "@tiptap/extension-code-block": "^2.6.0",
+    "@tiptap/extension-collaboration": "^2.6.0",
+    "@tiptap/extension-collaboration-cursor": "^2.6.0",
+    "@tiptap/extension-document": "^2.6.0",
+    "@tiptap/extension-heading": "^2.6.0",
+    "@tiptap/extension-image": "^2.6.0",
+    "@tiptap/extension-italic": "^2.6.0",
+    "@tiptap/extension-list-item": "^2.6.0",
+    "@tiptap/extension-ordered-list": "^2.6.0",
+    "@tiptap/extension-paragraph": "^2.6.0",
+    "@tiptap/extension-placeholder": "^2.6.0",
+    "@tiptap/extension-table": "^2.6.0",
+    "@tiptap/extension-table-cell": "^2.6.0",
+    "@tiptap/extension-table-header": "^2.6.0",
+    "@tiptap/extension-table-row": "^2.6.0",
+    "@tiptap/extension-text": "^2.6.0",
+    "@tiptap/extension-underline": "^2.6.0",
+    "@tiptap/pm": "^2.6.0",
+    "@tiptap/react": "^2.6.0",
+    "@tiptap/starter-kit": "^2.6.0",
+    "framer-motion": "^11.5.0",
+    "lucide-react": "^0.441.0",
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "uuid": "^10.0.0",
+    "y-prosemirror": "^1.2.9",
+    "y-protocols": "^1.0.6",
+    "y-websocket": "^2.0.4",
+    "yjs": "^13.6.18",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@types/uuid": "^10.0.0",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^14.2.0",
+    "postcss": "^8.4.45",
+    "tailwindcss": "^3.4.10",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
