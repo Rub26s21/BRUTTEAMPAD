@@ -3,6 +3,7 @@
    ============================================ */
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
     PanelLeftClose,
@@ -25,7 +26,9 @@ import {
 } from '@/lib/store';
 
 export function TopNavigation() {
-    const { workspace, displayName, logout } = useAuthStore();
+    const router = useRouter();
+    const { workspace, user, logout } = useAuthStore();
+    const displayName = user?.username || user?.email?.split('@')[0] || null;
     const { connectedUsers, isConnected } = useCollaborationStore();
     const { isSaving, lastSaved } = useEditorStateStore();
     const { sidebarOpen, toggleSidebar } = useUIStore();
@@ -135,7 +138,7 @@ export function TopNavigation() {
                         <Button
                             variant="ghost"
                             size="sm"
-                            onClick={logout}
+                            onClick={() => { logout(); router.push('/login'); }}
                             icon={<LogOut size={14} />}
                             aria-label="Leave workspace"
                         />

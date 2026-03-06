@@ -111,10 +111,9 @@ function getConnectedUsers(
     states.forEach((state, clientId) => {
         if (state.user) {
             users.push({
-                id: clientId.toString(),
+                clientId: clientId,
                 name: state.user.name,
                 color: state.user.color,
-                isOnline: true,
             });
         }
     });

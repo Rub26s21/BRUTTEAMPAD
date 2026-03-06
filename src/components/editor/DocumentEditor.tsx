@@ -30,7 +30,7 @@ import {
 import { uploadImage } from '@/lib/supabase-api';
 
 export function DocumentEditor() {
-    const { displayName, cursorColor, workspace } = useAuthStore();
+    const { user, cursorColor, workspace } = useAuthStore();
     const { activeDocument } = useDocumentStore();
     const { setWordCount, setCharacterCount, setEditing } =
         useEditorStateStore();
@@ -90,7 +90,7 @@ export function DocumentEditor() {
                 CollaborationCursor.configure({
                     provider: provider,
                     user: {
-                        name: displayName || 'Anonymous',
+                        name: user?.username || user?.email?.split('@')[0] || 'Anonymous',
                         color: cursorColor,
                     },
                 })
@@ -98,7 +98,7 @@ export function DocumentEditor() {
         }
 
         return exts;
-    }, [ydoc, provider, displayName, cursorColor]);
+    }, [ydoc, provider, user, cursorColor]);
 
     // Initialize TipTap editor
     const editor = useEditor(

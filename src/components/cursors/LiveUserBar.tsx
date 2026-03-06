@@ -32,10 +32,10 @@ export function LiveUserBar() {
                 <AnimatePresence>
                     {connectedUsers.map((user) => (
                         <UserBadge
-                            key={user.id}
+                            key={user.clientId}
                             name={user.name}
                             color={user.color}
-                            isOnline={user.isOnline}
+                            isOnline={true}
                         />
                     ))}
                 </AnimatePresence>

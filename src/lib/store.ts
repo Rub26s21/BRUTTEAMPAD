@@ -4,50 +4,48 @@
    ============================================ */
 import { create } from 'zustand';
 import type {
+    Profile,
     Workspace,
     Document,
     CollaborationUser,
     Suggestion,
     EditorState,
+    OnlineUser,
 } from './types';
 import { getRandomCursorColor } from './types';
 
-// ---- Auth / Session Store ----
+// ---- Auth Store (Supabase Auth) ----
 interface AuthStore {
-    teamKey: string | null;
-    displayName: string | null;
-    cursorColor: string;
-    sessionId: string | null;
-    workspace: Workspace | null;
+    user: Profile | null;
     isAuthenticated: boolean;
-    login: (teamKey: string, displayName: string) => void;
-    setWorkspace: (workspace: Workspace) => void;
-    setSessionId: (id: string) => void;
+    isLoading: boolean;
+    cursorColor: string;
+    workspace: Workspace | null;
+    setUser: (user: Profile | null) => void;
+    setWorkspace: (workspace: Workspace | null) => void;
+    setLoading: (loading: boolean) => void;
     logout: () => void;
 }
 
 export const useAuthStore = create<AuthStore>((set) => ({
-    teamKey: null,
-    displayName: null,
-    cursorColor: getRandomCursorColor(),
-    sessionId: null,
-    workspace: null,
+    user: null,
     isAuthenticated: false,
-    login: (teamKey, displayName) =>
+    isLoading: true,
+    cursorColor: getRandomCursorColor(),
+    workspace: null,
+    setUser: (user) =>
         set({
-            teamKey,
-            displayName,
-            isAuthenticated: true,
+            user,
+            isAuthenticated: !!user,
+            isLoading: false,
         }),
     setWorkspace: (workspace) => set({ workspace }),
-    setSessionId: (id) => set({ sessionId: id }),
+    setLoading: (isLoading) => set({ isLoading }),
     logout: () =>
         set({
-            teamKey: null,
-            displayName: null,
-            sessionId: null,
-            workspace: null,
+            user: null,
             isAuthenticated: false,
+            workspace: null,
             cursorColor: getRandomCursorColor(),
         }),
 }));
@@ -168,6 +166,17 @@ export const useSuggestionStore = create<SuggestionStore>((set) => ({
     togglePanel: () =>
         set((state) => ({ isPanelOpen: !state.isPanelOpen })),
     setPanelOpen: (isPanelOpen) => set({ isPanelOpen }),
+}));
+
+// ---- Online Presence Store ----
+interface OnlineStore {
+    onlineUsers: OnlineUser[];
+    setOnlineUsers: (users: OnlineUser[]) => void;
+}
+
+export const useOnlineStore = create<OnlineStore>((set) => ({
+    onlineUsers: [],
+    setOnlineUsers: (onlineUsers) => set({ onlineUsers }),
 }));
 
 // ---- UI Store ----

@@ -1,24 +1,49 @@
 /* ============================================
-   BRUTSTeamPad — Type Definitions
+   BRUTSTeamPad — TypeScript Type Definitions
+   Core types for the application domain
    ============================================ */
 
-export interface Workspace {
+// ---- User Profile (Supabase Auth) ----
+export interface Profile {
     id: string;
-    team_key: string;
-    name: string;
+    email: string;
+    username: string | null;
+    avatar_url: string | null;
     created_at: string;
 }
 
-export interface Document {
+// ---- Workspace ----
+export interface Workspace {
     id: string;
-    workspace_id: string;
-    title: string;
-    content: string | null;
-    yjs_state: Uint8Array | null;
+    name: string;
+    team_key: string;
+    owner_id: string | null;
     created_at: string;
     updated_at: string;
 }
 
+// ---- Workspace Member ----
+export interface WorkspaceMember {
+    id: string;
+    workspace_id: string;
+    user_id: string;
+    role: 'owner' | 'admin' | 'member';
+    joined_at: string;
+    profile?: Profile;
+}
+
+// ---- Document ----
+export interface Document {
+    id: string;
+    workspace_id: string;
+    title: string;
+    content: string;
+    yjs_state?: Uint8Array;
+    created_at: string;
+    updated_at: string;
+}
+
+// ---- Document Version ----
 export interface DocumentVersion {
     id: string;
     document_id: string;
@@ -27,13 +52,7 @@ export interface DocumentVersion {
     timestamp: string;
 }
 
-export interface TeamKey {
-    id: string;
-    team_key: string;
-    workspace_id: string;
-    created_at: string;
-}
-
+// ---- User Session (legacy, for WebSocket presence) ----
 export interface UserSession {
     id: string;
     workspace_id: string;
@@ -43,13 +62,23 @@ export interface UserSession {
     last_seen: string;
 }
 
-export interface CollaborationUser {
-    id: string;
-    name: string;
-    color: string;
-    isOnline: boolean;
+// ---- Online User (Supabase Presence) ----
+export interface OnlineUser {
+    user_id: string;
+    username: string;
+    email: string;
+    online_at: string;
+    cursor_color: string;
 }
 
+// ---- Collaboration User ----
+export interface CollaborationUser {
+    clientId: number;
+    name: string;
+    color: string;
+}
+
+// ---- Suggestion ----
 export interface Suggestion {
     id: string;
     document_id: string;
@@ -61,6 +90,7 @@ export interface Suggestion {
     created_at: string;
 }
 
+// ---- Editor State ----
 export interface EditorState {
     isEditing: boolean;
     isSaving: boolean;
@@ -69,19 +99,12 @@ export interface EditorState {
     characterCount: number;
 }
 
-// Cursor colors for collaboration
-export const CURSOR_COLORS = [
-    '#3b82f6', // blue
-    '#22c55e', // green
-    '#a855f7', // purple
-    '#ec4899', // pink
-    '#f97316', // orange
-    '#06b6d4', // cyan
-    '#ef4444', // red
-    '#eab308', // yellow
-    '#14b8a6', // teal
-    '#8b5cf6', // violet
-] as const;
+// ---- Cursor Colors ----
+const CURSOR_COLORS = [
+    '#ef4444', '#f97316', '#eab308', '#22c55e',
+    '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899',
+    '#14b8a6', '#f43f5e', '#6366f1', '#a855f7',
+];
 
 export function getRandomCursorColor(): string {
     return CURSOR_COLORS[Math.floor(Math.random() * CURSOR_COLORS.length)];

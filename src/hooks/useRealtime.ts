@@ -23,7 +23,8 @@ interface UseRealtimeOptions {
  */
 export function useRealtime({ documentId, enabled = true }: UseRealtimeOptions) {
     const connectionRef = useRef<RealtimeConnection | null>(null);
-    const { displayName, cursorColor } = useAuthStore();
+    const { user, cursorColor } = useAuthStore();
+    const displayName = user?.username || user?.email?.split('@')[0] || 'Anonymous';
     const { setConnectedUsers, setConnected, setSynced } =
         useCollaborationStore();
     const [ydoc, setYdoc] = useState<any>(null);
