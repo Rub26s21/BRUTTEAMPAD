@@ -84,16 +84,18 @@ export const EditorToolbar = memo(function EditorToolbar({
         >
             {/* History */}
             <ToolbarButton
-                onClick={() => editor.chain().focus().undo().run()}
+                onClick={() => {
+                    try { editor.chain().focus().undo().run(); } catch { }
+                }}
                 icon={<Undo size={16} />}
                 tooltip="Undo (Ctrl+Z)"
-                disabled={!editor.can().undo()}
             />
             <ToolbarButton
-                onClick={() => editor.chain().focus().redo().run()}
+                onClick={() => {
+                    try { editor.chain().focus().redo().run(); } catch { }
+                }}
                 icon={<Redo size={16} />}
                 tooltip="Redo (Ctrl+Y)"
-                disabled={!editor.can().redo()}
             />
 
             <Divider />

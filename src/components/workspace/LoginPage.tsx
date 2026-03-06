@@ -13,10 +13,10 @@ import { Button } from '@/components/ui/Button';
 import { useAuthStore } from '@/lib/store';
 import { getOrCreateWorkspace, registerUserSession } from '@/lib/supabase-api';
 
-export function LoginPage() {
-    const [teamKey, setTeamKey] = useState('');
+export function LoginPage({ prefilledTeamKey = '' }: { prefilledTeamKey?: string }) {
+    const [teamKey, setTeamKey] = useState(prefilledTeamKey);
     const [displayName, setDisplayName] = useState('');
-    const [step, setStep] = useState<'key' | 'name'>('key');
+    const [step, setStep] = useState<'key' | 'name'>(prefilledTeamKey ? 'name' : 'key');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const { login, setWorkspace, setSessionId, cursorColor } = useAuthStore();

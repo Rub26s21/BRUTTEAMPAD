@@ -4,14 +4,15 @@
    ============================================ */
 'use client';
 
-import { motion, type HTMLMotionProps } from 'framer-motion';
-import { forwardRef } from 'react';
+import { motion } from 'framer-motion';
+import { forwardRef, type ReactNode, type ButtonHTMLAttributes } from 'react';
 
-interface ButtonProps extends HTMLMotionProps<'button'> {
+interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
     variant?: 'glass' | 'neon' | 'ghost' | 'danger';
     size?: 'sm' | 'md' | 'lg';
-    icon?: React.ReactNode;
+    icon?: ReactNode;
     isLoading?: boolean;
+    children?: ReactNode;
 }
 
 const variantStyles: Record<string, string> = {
@@ -46,7 +47,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ) => {
         return (
             <motion.button
-                ref={ref}
+                ref={ref as any}
                 className={`inline-flex items-center justify-center font-medium transition-all duration-300 
           ${variantStyles[variant]} ${sizeStyles[size]} 
           ${disabled || isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
@@ -54,7 +55,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
                 whileHover={!disabled && !isLoading ? { scale: 1.02, y: -1 } : {}}
                 whileTap={!disabled && !isLoading ? { scale: 0.98 } : {}}
                 disabled={disabled || isLoading}
-                {...props}
+                onClick={props.onClick as any}
+                id={props.id}
+                aria-label={props['aria-label']}
             >
                 {isLoading ? (
                     <svg

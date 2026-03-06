@@ -4,14 +4,15 @@
    ============================================ */
 'use client';
 
-import { motion, type HTMLMotionProps } from 'framer-motion';
-import { forwardRef } from 'react';
+import { motion } from 'framer-motion';
+import { forwardRef, type ReactNode, type HTMLAttributes } from 'react';
 
-interface GlassPanelProps extends HTMLMotionProps<'div'> {
+interface GlassPanelProps extends HTMLAttributes<HTMLDivElement> {
     variant?: 'default' | 'elevated' | 'flat' | 'subtle';
     neonBorder?: 'brand' | 'cyan' | 'purple' | 'pink' | 'none';
     padding?: 'none' | 'sm' | 'md' | 'lg';
     animate?: boolean;
+    children?: ReactNode;
 }
 
 const variantStyles: Record<string, string> = {
@@ -69,7 +70,6 @@ export const GlassPanel = forwardRef<HTMLDivElement, GlassPanelProps>(
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-                {...props}
             >
                 {children}
             </motion.div>
