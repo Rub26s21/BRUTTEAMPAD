@@ -199,33 +199,45 @@ DROP POLICY IF EXISTS "Workspace members can access sessions" ON user_sessions;
 DROP POLICY IF EXISTS "Service role full access sessions" ON user_sessions;
 DROP POLICY IF EXISTS "Service role full access team_keys" ON team_keys;
 DROP POLICY IF EXISTS "Anyone can read team_keys for invite lookup" ON team_keys;
+-- Drop old service_role-only policies from previous migration
+DROP POLICY IF EXISTS "service_all_profiles" ON profiles;
+DROP POLICY IF EXISTS "public_read_profiles" ON profiles;
+DROP POLICY IF EXISTS "service_all_members" ON workspace_members;
+DROP POLICY IF EXISTS "public_read_members" ON workspace_members;
+DROP POLICY IF EXISTS "service_all_workspaces" ON workspaces;
+DROP POLICY IF EXISTS "public_read_workspaces" ON workspaces;
+DROP POLICY IF EXISTS "service_all_documents" ON documents;
+DROP POLICY IF EXISTS "public_read_documents" ON documents;
+DROP POLICY IF EXISTS "service_all_versions" ON document_versions;
+DROP POLICY IF EXISTS "public_read_versions" ON document_versions;
+DROP POLICY IF EXISTS "service_all_sessions" ON user_sessions;
+DROP POLICY IF EXISTS "public_read_sessions" ON user_sessions;
+DROP POLICY IF EXISTS "service_all_suggestions" ON suggestions;
+DROP POLICY IF EXISTS "public_read_suggestions" ON suggestions;
+DROP POLICY IF EXISTS "service_all_team_keys" ON team_keys;
+DROP POLICY IF EXISTS "public_read_team_keys" ON team_keys;
+-- Drop new allow_all policies (for re-run safety)
+DROP POLICY IF EXISTS "allow_all_profiles" ON profiles;
+DROP POLICY IF EXISTS "allow_all_members" ON workspace_members;
+DROP POLICY IF EXISTS "allow_all_workspaces" ON workspaces;
+DROP POLICY IF EXISTS "allow_all_documents" ON documents;
+DROP POLICY IF EXISTS "allow_all_versions" ON document_versions;
+DROP POLICY IF EXISTS "allow_all_sessions" ON user_sessions;
+DROP POLICY IF EXISTS "allow_all_suggestions" ON suggestions;
+DROP POLICY IF EXISTS "allow_all_team_keys" ON team_keys;
 
--- NEW RLS: Service role can do everything (our API uses service role key)
--- Public can read things needed for lookups
+-- NEW RLS: Allow ALL operations for everyone
+-- We use simple email+mobile auth (not Supabase Auth),
+-- so the frontend anon client needs full CRUD access.
 
-CREATE POLICY "service_all_profiles" ON profiles FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "public_read_profiles" ON profiles FOR SELECT USING (true);
-
-CREATE POLICY "service_all_members" ON workspace_members FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "public_read_members" ON workspace_members FOR SELECT USING (true);
-
-CREATE POLICY "service_all_workspaces" ON workspaces FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "public_read_workspaces" ON workspaces FOR SELECT USING (true);
-
-CREATE POLICY "service_all_documents" ON documents FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "public_read_documents" ON documents FOR SELECT USING (true);
-
-CREATE POLICY "service_all_versions" ON document_versions FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "public_read_versions" ON document_versions FOR SELECT USING (true);
-
-CREATE POLICY "service_all_sessions" ON user_sessions FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "public_read_sessions" ON user_sessions FOR SELECT USING (true);
-
-CREATE POLICY "service_all_suggestions" ON suggestions FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "public_read_suggestions" ON suggestions FOR SELECT USING (true);
-
-CREATE POLICY "service_all_team_keys" ON team_keys FOR ALL USING (auth.role() = 'service_role');
-CREATE POLICY "public_read_team_keys" ON team_keys FOR SELECT USING (true);
+CREATE POLICY "allow_all_profiles" ON profiles FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_members" ON workspace_members FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_workspaces" ON workspaces FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_documents" ON documents FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_versions" ON document_versions FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_sessions" ON user_sessions FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_suggestions" ON suggestions FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "allow_all_team_keys" ON team_keys FOR ALL USING (true) WITH CHECK (true);
 
 -- ================================================
 -- STEP 9: Storage bucket (ignore error if exists)
