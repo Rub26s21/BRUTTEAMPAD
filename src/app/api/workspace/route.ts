@@ -23,10 +23,25 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        const { data: memberships } = await supabase
+        // Try workspace_members first
+        const { data: memberships, error: memError } = await supabase
             .from('workspace_members')
             .select('workspace_id, role')
             .eq('user_id', userId);
+
+        if (memError) {
+            console.error('workspace_members query error:', memError.message);
+            // Fall back to workspaces owned by user
+            const { data: ownedWs } = await supabase
+                .from('workspaces')
+                .select('*')
+                .eq('owner_id', userId)
+                .order('created_at', { ascending: false });
+
+            return NextResponse.json({
+                workspaces: (ownedWs || []).map((ws) => ({ ...ws, role: 'owner' })),
+            });
+        }
 
         const wsIds = memberships?.map((m) => m.workspace_id) || [];
 
@@ -46,8 +61,9 @@ export async function GET(request: NextRequest) {
         }));
 
         return NextResponse.json({ workspaces: enriched });
-    } catch {
-        return NextResponse.json({ workspaces: [] });
+    } catch (err: any) {
+        console.error('GET /api/workspace error:', err);
+        return NextResponse.json({ workspaces: [], error: err.message });
     }
 }
 
@@ -55,7 +71,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     const userId = getUserId(request);
     if (!userId) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'Not logged in. Please refresh and log in again.' }, { status: 401 });
     }
 
     try {
@@ -69,24 +85,25 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const finalKey = (teamKey || `BRUTS-${Math.floor(1000 + Math.random() * 9000)}`)
-            .toUpperCase().trim();
-
-        // Check for key collision
-        const { data: existing } = await supabase
-            .from('workspaces')
+        // Verify user exists in profiles
+        const { data: profile, error: profileError } = await supabase
+            .from('profiles')
             .select('id')
-            .eq('team_key', finalKey)
+            .eq('id', userId)
             .single();
 
-        if (existing) {
+        if (profileError || !profile) {
+            console.error('Profile lookup failed:', profileError?.message);
             return NextResponse.json(
-                { error: `Key ${finalKey} taken. Try again.` },
-                { status: 409 }
+                { error: 'User profile not found. Please log out and log back in.' },
+                { status: 404 }
             );
         }
 
-        // Create workspace with owner
+        const finalKey = (teamKey || `BRUTS-${Date.now().toString(36).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`)
+            .toUpperCase().trim();
+
+        // Create workspace
         const { data: workspace, error: wsError } = await supabase
             .from('workspaces')
             .insert({
@@ -98,6 +115,7 @@ export async function POST(request: NextRequest) {
             .single();
 
         if (wsError) {
+            console.error('Workspace insert error:', wsError.message, wsError.details, wsError.hint);
             return NextResponse.json(
                 { error: 'Failed to create workspace: ' + wsError.message },
                 { status: 500 }
@@ -105,29 +123,44 @@ export async function POST(request: NextRequest) {
         }
 
         // Add creator as owner member
-        await supabase.from('workspace_members').insert({
+        const { error: memberError } = await supabase.from('workspace_members').insert({
             workspace_id: workspace.id,
             user_id: userId,
             role: 'owner',
         });
 
+        if (memberError) {
+            console.error('Member insert error:', memberError.message);
+            // Don't fail — workspace was already created
+        }
+
         // Create team_keys entry
-        await supabase.from('team_keys').insert({
+        const { error: tkError } = await supabase.from('team_keys').insert({
             team_key: finalKey,
             workspace_id: workspace.id,
         });
 
+        if (tkError) {
+            console.error('team_keys insert error:', tkError.message);
+            // Don't fail — workspace was already created
+        }
+
         // Create welcome document
-        await supabase.from('documents').insert({
+        const { error: docError } = await supabase.from('documents').insert({
             workspace_id: workspace.id,
             title: 'Welcome to BRUTSTeamPad',
             content: `<h1>Welcome! 🎉</h1><p>This is your first document. Share invite code <strong>${finalKey}</strong> with your team to start collaborating!</p>`,
         });
 
+        if (docError) {
+            console.error('Document insert error:', docError.message);
+        }
+
         return NextResponse.json({ workspace, teamKey: finalKey }, { status: 201 });
-    } catch {
+    } catch (err: any) {
+        console.error('POST /api/workspace error:', err);
         return NextResponse.json(
-            { error: 'Internal server error' },
+            { error: 'Server error: ' + (err.message || 'Unknown error') },
             { status: 500 }
         );
     }
