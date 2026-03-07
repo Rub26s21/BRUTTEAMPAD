@@ -10,19 +10,14 @@ const supabase = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Verify auth token and return user
-async function getAuthUser(request: NextRequest) {
-    const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-    if (!token) return null;
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    if (error || !user) return null;
-    return user;
+function getUserId(request: NextRequest): string | null {
+    return request.headers.get('X-User-Id');
 }
 
 // GET /api/invite?code=BRUTS-8472
 export async function GET(request: NextRequest) {
-    const user = await getAuthUser(request);
-    if (!user) {
+    const userId = getUserId(request);
+    if (!userId) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -32,7 +27,6 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        // Look up workspace by team_key (invite code)
         const { data: workspace, error: wsError } = await supabase
             .from('workspaces')
             .select('id, name, team_key, owner_id, created_at')
@@ -43,12 +37,11 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid invite code' }, { status: 404 });
         }
 
-        // Check if already a member
         const { data: member } = await supabase
             .from('workspace_members')
             .select('id')
             .eq('workspace_id', workspace.id)
-            .eq('user_id', user.id)
+            .eq('user_id', userId)
             .single();
 
         return NextResponse.json({
@@ -62,8 +55,8 @@ export async function GET(request: NextRequest) {
 
 // POST /api/invite — Join workspace
 export async function POST(request: NextRequest) {
-    const user = await getAuthUser(request);
-    if (!user) {
+    const userId = getUserId(request);
+    if (!userId) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -73,7 +66,6 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invite code required' }, { status: 400 });
         }
 
-        // Look up workspace
         const { data: workspace, error: wsError } = await supabase
             .from('workspaces')
             .select('id, name')
@@ -84,12 +76,11 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid invite code' }, { status: 404 });
         }
 
-        // Check if already a member
         const { data: existing } = await supabase
             .from('workspace_members')
             .select('id')
             .eq('workspace_id', workspace.id)
-            .eq('user_id', user.id)
+            .eq('user_id', userId)
             .single();
 
         if (existing) {
@@ -99,12 +90,11 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        // Add as member
         const { error: memberError } = await supabase
             .from('workspace_members')
             .insert({
                 workspace_id: workspace.id,
-                user_id: user.id,
+                user_id: userId,
                 role: 'member',
             });
 

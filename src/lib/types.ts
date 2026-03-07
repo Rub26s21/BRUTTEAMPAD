@@ -1,12 +1,12 @@
 /* ============================================
    BRUTSTeamPad — TypeScript Type Definitions
-   Core types for the application domain
    ============================================ */
 
-// ---- User Profile (Supabase Auth) ----
+// ---- User Profile ----
 export interface Profile {
     id: string;
     email: string;
+    mobile: string | null;
     username: string | null;
     avatar_url: string | null;
     created_at: string;
@@ -52,7 +52,7 @@ export interface DocumentVersion {
     timestamp: string;
 }
 
-// ---- User Session (legacy, for WebSocket presence) ----
+// ---- User Session ----
 export interface UserSession {
     id: string;
     workspace_id: string;
@@ -62,7 +62,7 @@ export interface UserSession {
     last_seen: string;
 }
 
-// ---- Online User (Supabase Presence) ----
+// ---- Online User ----
 export interface OnlineUser {
     user_id: string;
     username: string;
@@ -99,11 +99,11 @@ export interface EditorState {
     characterCount: number;
 }
 
-// ---- Cursor Colors ----
+// ---- Cursor Colors (candy/cartoon palette) ----
 const CURSOR_COLORS = [
-    '#ef4444', '#f97316', '#eab308', '#22c55e',
-    '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899',
-    '#14b8a6', '#f43f5e', '#6366f1', '#a855f7',
+    '#ff6b9d', '#c44dff', '#6366f1', '#06d6a0',
+    '#ffd166', '#ff85a1', '#7209b7', '#4cc9f0',
+    '#f72585', '#4361ee', '#3a0ca3', '#ff9f1c',
 ];
 
 export function getRandomCursorColor(): string {

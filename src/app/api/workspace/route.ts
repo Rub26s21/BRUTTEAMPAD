@@ -1,6 +1,6 @@
 /* ============================================
    BRUTSTeamPad — API: Workspace Operations
-   Auth-protected workspace CRUD
+   Simple auth via X-User-Id header
    ============================================ */
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
@@ -10,32 +10,23 @@ const supabase = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Verify auth token and return user
-async function getAuthUser(request: NextRequest) {
-    const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-    if (!token) return null;
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    if (error || !user) return null;
-    return user;
+// Simple auth: get user_id from header
+function getUserId(request: NextRequest): string | null {
+    return request.headers.get('X-User-Id');
 }
 
 // GET /api/workspace — list user's workspaces
 export async function GET(request: NextRequest) {
-    const user = await getAuthUser(request);
-    if (!user) {
+    const userId = getUserId(request);
+    if (!userId) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     try {
-        // Get workspaces the user is a member of
-        const { data: memberships, error: memError } = await supabase
+        const { data: memberships } = await supabase
             .from('workspace_members')
             .select('workspace_id, role')
-            .eq('user_id', user.id);
-
-        if (memError) {
-            return NextResponse.json({ workspaces: [] });
-        }
+            .eq('user_id', userId);
 
         const wsIds = memberships?.map((m) => m.workspace_id) || [];
 
@@ -43,17 +34,12 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ workspaces: [] });
         }
 
-        const { data: workspaces, error: wsError } = await supabase
+        const { data: workspaces } = await supabase
             .from('workspaces')
             .select('id, name, team_key, owner_id, created_at')
             .in('id', wsIds)
             .order('created_at', { ascending: false });
 
-        if (wsError) {
-            return NextResponse.json({ workspaces: [] });
-        }
-
-        // Attach role to each workspace
         const enriched = (workspaces || []).map((ws) => ({
             ...ws,
             role: memberships?.find((m) => m.workspace_id === ws.id)?.role || 'member',
@@ -65,10 +51,10 @@ export async function GET(request: NextRequest) {
     }
 }
 
-// POST /api/workspace — create new workspace (authenticated)
+// POST /api/workspace — create new workspace
 export async function POST(request: NextRequest) {
-    const user = await getAuthUser(request);
-    if (!user) {
+    const userId = getUserId(request);
+    if (!userId) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -106,7 +92,7 @@ export async function POST(request: NextRequest) {
             .insert({
                 team_key: finalKey,
                 name: name.trim(),
-                owner_id: user.id,
+                owner_id: userId,
             })
             .select()
             .single();
@@ -121,7 +107,7 @@ export async function POST(request: NextRequest) {
         // Add creator as owner member
         await supabase.from('workspace_members').insert({
             workspace_id: workspace.id,
-            user_id: user.id,
+            user_id: userId,
             role: 'owner',
         });
 

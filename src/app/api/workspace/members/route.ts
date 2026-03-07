@@ -10,18 +10,14 @@ const supabase = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-async function getAuthUser(request: NextRequest) {
-    const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-    if (!token) return null;
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    if (error || !user) return null;
-    return user;
+function getUserId(request: NextRequest): string | null {
+    return request.headers.get('X-User-Id');
 }
 
 // GET /api/workspace/members?workspaceId=xxx
 export async function GET(request: NextRequest) {
-    const user = await getAuthUser(request);
-    if (!user) {
+    const userId = getUserId(request);
+    if (!userId) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -31,20 +27,18 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        // Check if user is a member
         const { data: membership } = await supabase
             .from('workspace_members')
             .select('id, role')
             .eq('workspace_id', workspaceId)
-            .eq('user_id', user.id)
+            .eq('user_id', userId)
             .single();
 
         if (!membership) {
             return NextResponse.json({ isMember: false, members: [] });
         }
 
-        // Get all members with profiles
-        const { data: members, error: memError } = await supabase
+        const { data: members } = await supabase
             .from('workspace_members')
             .select(`
                 id,

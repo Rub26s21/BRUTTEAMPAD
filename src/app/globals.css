@@ -12,13 +12,13 @@
 /* ---- Base Layer ---- */
 @layer base {
   :root {
-    --color-neon-blue: #00d4ff;
-    --color-neon-purple: #a855f7;
-    --color-neon-pink: #ec4899;
-    --color-neon-green: #22c55e;
-    --color-neon-orange: #f97316;
-    --color-neon-cyan: #06b6d4;
-    --color-brand: #6366f1;
+    --color-neon-blue: #4cc9f0;
+    --color-neon-purple: #c44dff;
+    --color-neon-pink: #ff6b9d;
+    --color-neon-green: #06d6a0;
+    --color-neon-orange: #ffd166;
+    --color-neon-cyan: #4cc9f0;
+    --color-brand: #c44dff;
     --glass-bg: rgba(255, 255, 255, 0.08);
     --glass-bg-hover: rgba(255, 255, 255, 0.12);
     --glass-border: rgba(255, 255, 255, 0.15);
@@ -68,6 +68,7 @@
 
 /* ---- Component Layer ---- */
 @layer components {
+
   /* Glass Panel — the core building block */
   .glass-panel {
     background: var(--glass-bg);
@@ -161,26 +162,18 @@
 
   /* Mesh background gradient */
   .bg-mesh {
-    background: radial-gradient(
-        at 40% 20%,
+    background: radial-gradient(at 40% 20%,
         rgba(99, 102, 241, 0.15) 0px,
-        transparent 50%
-      ),
-      radial-gradient(
-        at 80% 0%,
+        transparent 50%),
+      radial-gradient(at 80% 0%,
         rgba(168, 85, 247, 0.12) 0px,
-        transparent 50%
-      ),
-      radial-gradient(
-        at 0% 50%,
+        transparent 50%),
+      radial-gradient(at 0% 50%,
         rgba(6, 182, 212, 0.08) 0px,
-        transparent 50%
-      ),
-      radial-gradient(
-        at 80% 80%,
+        transparent 50%),
+      radial-gradient(at 80% 80%,
         rgba(236, 72, 153, 0.06) 0px,
-        transparent 50%
-      );
+        transparent 50%);
   }
 
   /* Badge */
@@ -202,14 +195,16 @@
 
 /* ---- TipTap Editor Styles ---- */
 .tiptap-editor {
-  @apply text-white/90 leading-relaxed;
+  @apply text-gray-800 leading-relaxed;
   font-family: 'Inter', sans-serif;
   min-height: 60vh;
   padding: 2rem;
   outline: none;
+  background: white;
+  color: #1a1a2e;
 }
 
-.tiptap-editor > *:first-child {
+.tiptap-editor>*:first-child {
   margin-top: 0;
 }
 
@@ -219,17 +214,20 @@
 }
 
 .tiptap-editor h1 {
-  @apply text-3xl font-bold mb-6 text-white;
+  @apply text-3xl font-bold mb-6;
+  color: #1a1a2e;
   line-height: 1.3;
 }
 
 .tiptap-editor h2 {
-  @apply text-2xl font-semibold mb-4 text-white;
+  @apply text-2xl font-semibold mb-4;
+  color: #1a1a2e;
   line-height: 1.35;
 }
 
 .tiptap-editor h3 {
-  @apply text-xl font-semibold mb-3 text-white/95;
+  @apply text-xl font-semibold mb-3;
+  color: #2d2d44;
   line-height: 1.4;
 }
 
@@ -242,7 +240,7 @@
 }
 
 .tiptap-editor li {
-  @apply text-white/85;
+  color: #333;
 }
 
 .tiptap-editor li p {
@@ -251,14 +249,14 @@
 
 .tiptap-editor code {
   @apply px-1.5 py-0.5 rounded text-sm;
-  background: rgba(99, 102, 241, 0.15);
-  color: #a5b4fc;
+  background: rgba(196, 77, 255, 0.1);
+  color: #7c3aed;
   font-family: 'JetBrains Mono', monospace;
 }
 
 .tiptap-editor pre {
   @apply rounded-xl p-4 mb-4 overflow-x-auto;
-  background: rgba(0, 0, 0, 0.4);
+  background: #1e1e2e;
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -268,8 +266,9 @@
 }
 
 .tiptap-editor blockquote {
-  @apply pl-4 mb-4 italic text-white/60;
-  border-left: 3px solid rgba(99, 102, 241, 0.5);
+  @apply pl-4 mb-4 italic;
+  color: #666;
+  border-left: 3px solid rgba(196, 77, 255, 0.5);
 }
 
 .tiptap-editor hr {
@@ -279,7 +278,8 @@
 }
 
 .tiptap-editor strong {
-  @apply font-bold text-white;
+  @apply font-bold;
+  color: #1a1a2e;
 }
 
 .tiptap-editor em {
@@ -302,14 +302,16 @@
 }
 
 .tiptap-editor th {
-  @apply px-4 py-2 text-left text-sm font-semibold text-white/80;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  @apply px-4 py-2 text-left text-sm font-semibold;
+  color: #1a1a2e;
+  background: #f5f3ff;
+  border: 1px solid #e5e7eb;
 }
 
 .tiptap-editor td {
-  @apply px-4 py-2 text-sm text-white/75;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  @apply px-4 py-2 text-sm;
+  color: #333;
+  border: 1px solid #e5e7eb;
 }
 
 .tiptap-editor .tableWrapper {
@@ -319,7 +321,10 @@
 
 /* Placeholder */
 .tiptap-editor p.is-editor-empty:first-child::before {
-  @apply text-white/20 float-left pointer-events-none h-0;
+  color: #aaa;
+  float: left;
+  pointer-events: none;
+  height: 0;
   content: attr(data-placeholder);
 }
 
@@ -354,18 +359,17 @@
   0% {
     background-position: -200% 0;
   }
+
   100% {
     background-position: 200% 0;
   }
 }
 
 .shimmer {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.03) 25%,
-    rgba(255, 255, 255, 0.08) 50%,
-    rgba(255, 255, 255, 0.03) 75%
-  );
+  background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0.03) 25%,
+      rgba(255, 255, 255, 0.08) 50%,
+      rgba(255, 255, 255, 0.03) 75%);
   background-size: 200% 100%;
   animation: shimmer 2s ease-in-out infinite;
 }
@@ -376,6 +380,7 @@
     transform: scale(0.5);
     opacity: 1;
   }
+
   100% {
     transform: scale(2);
     opacity: 0;

@@ -226,8 +226,8 @@ export function DocumentEditor() {
     return (
         <div className="flex-1 flex flex-col min-h-0">
             {/* Document title */}
-            <div className="px-8 pt-6 pb-2">
-                <h1 className="text-2xl font-bold text-white/90 truncate">
+            <div className="px-8 pt-6 pb-2 bg-white">
+                <h1 className="text-2xl font-bold text-gray-800 truncate">
                     {activeDocument.title}
                 </h1>
             </div>
@@ -239,7 +239,7 @@ export function DocumentEditor() {
             <EditorToolbar editor={editor} onImageUpload={handleImageUpload} />
 
             {/* Editor area */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto bg-white">
                 <div className="max-w-4xl mx-auto">
                     <EditorContent editor={editor} />
                 </div>

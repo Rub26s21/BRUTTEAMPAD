@@ -1,6 +1,5 @@
 /* ============================================
    BRUTSTeamPad — Zustand State Stores
-   Global state management for the application
    ============================================ */
 import { create } from 'zustand';
 import type {
@@ -13,8 +12,9 @@ import type {
     OnlineUser,
 } from './types';
 import { getRandomCursorColor } from './types';
+import { saveUser, clearUser, getSavedUser } from './supabase';
 
-// ---- Auth Store (Supabase Auth) ----
+// ---- Auth Store (Simple email+mobile) ----
 interface AuthStore {
     user: Profile | null;
     isAuthenticated: boolean;
@@ -24,7 +24,9 @@ interface AuthStore {
     setUser: (user: Profile | null) => void;
     setWorkspace: (workspace: Workspace | null) => void;
     setLoading: (loading: boolean) => void;
+    login: (profile: Profile) => void;
     logout: () => void;
+    loadFromStorage: () => void;
 }
 
 export const useAuthStore = create<AuthStore>((set) => ({
@@ -41,13 +43,31 @@ export const useAuthStore = create<AuthStore>((set) => ({
         }),
     setWorkspace: (workspace) => set({ workspace }),
     setLoading: (isLoading) => set({ isLoading }),
-    logout: () =>
+    login: (profile) => {
+        saveUser(profile);
+        set({
+            user: profile,
+            isAuthenticated: true,
+            isLoading: false,
+        });
+    },
+    logout: () => {
+        clearUser();
         set({
             user: null,
             isAuthenticated: false,
             workspace: null,
             cursorColor: getRandomCursorColor(),
-        }),
+        });
+    },
+    loadFromStorage: () => {
+        const stored = getSavedUser();
+        set({
+            user: stored,
+            isAuthenticated: !!stored,
+            isLoading: false,
+        });
+    },
 }));
 
 // ---- Document Store ----

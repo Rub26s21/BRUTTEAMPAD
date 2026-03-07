@@ -1,65 +1,52 @@
 /* ============================================
-   BRUTSTeamPad — Supabase Client
-   Browser client with auth persistence
+   BRUTSTeamPad — Supabase Client + Auth Helpers
+   Simple email+mobile auth (no verification)
    ============================================ */
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-        flowType: 'pkce',
-    },
-});
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// ---- Auth Helpers ----
+// ---- Simple Auth Helpers ----
 
-export async function signInWithMagicLink(email: string, redirectTo?: string) {
-    const { data, error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-            emailRedirectTo: redirectTo || `${window.location.origin}/auth/callback`,
-        },
-    });
-    if (error) throw error;
-    return data;
+const STORAGE_KEY = 'brutsteampad_user';
+
+/** Save user profile to localStorage */
+export function saveUser(profile: any) {
+    if (typeof window !== 'undefined') {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+    }
 }
 
-export async function signOut() {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+/** Get user profile from localStorage */
+export function getSavedUser() {
+    if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+            try { return JSON.parse(stored); } catch { return null; }
+        }
+    }
+    return null;
 }
 
-export async function getCurrentUser() {
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error) throw error;
-    return user;
+/** Clear user profile from localStorage */
+export function clearUser() {
+    if (typeof window !== 'undefined') {
+        localStorage.removeItem(STORAGE_KEY);
+    }
 }
 
-export async function getSession() {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    if (error) throw error;
-    return session;
-}
-
-export async function getAuthToken(): Promise<string | null> {
-    const session = await getSession();
-    return session?.access_token || null;
-}
-
-// Authenticated fetch helper — adds Bearer token to API requests
-export async function authFetch(url: string, options: RequestInit = {}) {
-    const token = await getAuthToken();
+/** Authenticated fetch — adds X-User-Id header automatically */
+export function authFetch(url: string, options: RequestInit = {}) {
+    const user = getSavedUser();
     return fetch(url, {
         ...options,
         headers: {
             ...options.headers,
             'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            ...(user ? { 'X-User-Id': user.id } : {}),
         },
     });
 }

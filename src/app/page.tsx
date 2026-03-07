@@ -1,6 +1,6 @@
 /* ============================================
-   BRUTSTeamPad — Dashboard (Landing Page)
-   Shows only workspaces user belongs to
+   BRUTSTeamPad — Dashboard
+   Workspace listing with liquid cartoon theme
    ============================================ */
 'use client';
 
@@ -8,82 +8,56 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    Plus, Copy, ExternalLink, Layers, Check, X, Sparkles,
-    Zap, Users, FileText, KeyRound, Link2, LogOut, User,
+    Plus,
+    Copy,
+    Link2,
+    Crown,
+    Sparkles,
+    LogOut,
+    ArrowRight,
 } from 'lucide-react';
-import { Logo } from '@/components/ui/Logo';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Button } from '@/components/ui/Button';
-import { supabase, authFetch, signOut } from '@/lib/supabase';
 import { useAuthStore } from '@/lib/store';
+import { authFetch } from '@/lib/supabase';
+import Image from 'next/image';
 
 interface WorkspaceItem {
     id: string;
     name: string;
     team_key: string;
     owner_id: string | null;
+    role: string;
     created_at: string;
-    role?: string;
-}
-
-function generateTeamKey(): string {
-    const num = Math.floor(1000 + Math.random() * 9000);
-    return `BRUTS-${num}`;
 }
 
 export default function Dashboard() {
     const router = useRouter();
-    const { user, isAuthenticated, isLoading: authLoading, setUser } = useAuthStore();
+    const { user, isAuthenticated, isLoading: authLoading, logout, loadFromStorage } = useAuthStore();
     const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [showModal, setShowModal] = useState(false);
+    const [showCreateModal, setShowCreateModal] = useState(false);
     const [newName, setNewName] = useState('');
     const [creating, setCreating] = useState(false);
-    const [error, setError] = useState('');
-    const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [copied, setCopied] = useState<string | null>(null);
 
-    // Auth check
     useEffect(() => {
-        const checkAuth = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-                router.replace('/login');
-                return;
-            }
-            // Load profile
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .single();
+        loadFromStorage();
+    }, [loadFromStorage]);
 
-            if (profile) {
-                setUser(profile);
-            } else {
-                // Profile auto-created by trigger, use basic info
-                setUser({
-                    id: session.user.id,
-                    email: session.user.email || '',
-                    username: session.user.email?.split('@')[0] || 'User',
-                    avatar_url: null,
-                    created_at: new Date().toISOString(),
-                });
-            }
-        };
-        checkAuth();
-    }, [router, setUser]);
+    useEffect(() => {
+        if (!authLoading && !isAuthenticated) {
+            router.push('/login');
+        }
+    }, [authLoading, isAuthenticated, router]);
 
-    // Fetch only user's workspaces
     const fetchWorkspaces = useCallback(async () => {
         if (!isAuthenticated) return;
+        setIsLoading(true);
         try {
             const res = await authFetch('/api/workspace');
-            if (res.ok) {
-                const data = await res.json();
-                setWorkspaces(data.workspaces || []);
-            }
+            const data = await res.json();
+            setWorkspaces(data.workspaces || []);
         } catch {
-            // silently fail
+            setWorkspaces([]);
         } finally {
             setIsLoading(false);
         }
@@ -94,342 +68,435 @@ export default function Dashboard() {
     }, [isAuthenticated, fetchWorkspaces]);
 
     const handleCreate = async () => {
-        if (!newName.trim()) {
-            setError('Please enter a workspace name');
-            return;
-        }
+        if (!newName.trim()) return;
         setCreating(true);
-        setError('');
         try {
-            const teamKey = generateTeamKey();
             const res = await authFetch('/api/workspace', {
                 method: 'POST',
-                body: JSON.stringify({ name: newName.trim(), teamKey }),
+                body: JSON.stringify({ name: newName.trim() }),
             });
-            if (!res.ok) {
-                const d = await res.json();
-                throw new Error(d.error || 'Failed to create');
+            if (res.ok) {
+                setShowCreateModal(false);
+                setNewName('');
+                fetchWorkspaces();
             }
-            setShowModal(false);
-            setNewName('');
-            fetchWorkspaces();
-        } catch (err: any) {
-            setError(err.message);
         } finally {
             setCreating(false);
         }
     };
 
-    const handleLogout = async () => {
-        await signOut();
-        useAuthStore.getState().logout();
-        router.replace('/login');
-    };
-
-    const copyKey = (key: string, id: string) => {
-        navigator.clipboard.writeText(key);
-        setCopiedId(id);
-        setTimeout(() => setCopiedId(null), 2000);
-    };
-
-    const copyInviteLink = (key: string, id: string) => {
-        const url = `${window.location.origin}/invite/${key}`;
-        navigator.clipboard.writeText(url);
-        setCopiedId(`link-${id}`);
-        setTimeout(() => setCopiedId(null), 2000);
+    const copyInviteLink = (teamKey: string) => {
+        const link = `${window.location.origin}/invite/${teamKey}`;
+        navigator.clipboard.writeText(link);
+        setCopied(teamKey);
+        setTimeout(() => setCopied(null), 2000);
     };
 
     if (authLoading || !isAuthenticated) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-mesh">
-                <motion.div
-                    className="w-8 h-8 border-2 border-brand-500/30 border-t-brand-400 rounded-full"
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                />
+            <div className="dash-loading">
+                <div className="loading-blob" />
+                <p>Loading...</p>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-mesh overflow-auto">
-            {/* Ambient orbs */}
-            <div className="fixed inset-0 pointer-events-none">
-                <motion.div
-                    className="absolute top-1/4 left-1/4 w-[400px] h-[400px] rounded-full bg-brand-600/10 blur-[100px]"
-                    animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.15, 0.1] }}
-                    transition={{ duration: 8, repeat: Infinity }}
-                />
-                <motion.div
-                    className="absolute bottom-1/4 right-1/4 w-[350px] h-[350px] rounded-full bg-neon-purple/10 blur-[100px]"
-                    animate={{ scale: [1.2, 1, 1.2], opacity: [0.08, 0.12, 0.08] }}
-                    transition={{ duration: 10, repeat: Infinity }}
-                />
+        <div className="dashboard">
+            {/* Liquid background */}
+            <div className="liquid-bg">
+                <div className="blob blob-1" />
+                <div className="blob blob-2" />
+                <div className="blob blob-3" />
             </div>
 
-            {/* Top Bar */}
-            <header className="relative z-10 border-b border-white/10 bg-[rgba(10,10,20,0.7)] backdrop-blur-xl">
-                <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-                    <Logo size="sm" />
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 text-xs text-white/40">
-                            <User size={14} />
-                            <span>{user?.username || user?.email}</span>
-                        </div>
-                        <Button
-                            variant="neon"
-                            size="sm"
-                            icon={<Plus size={14} />}
-                            onClick={() => setShowModal(true)}
-                            id="create-workspace-btn"
-                        >
-                            Create Workspace
-                        </Button>
-                        <button
-                            onClick={handleLogout}
-                            className="p-2 rounded-lg text-white/30 hover:text-white/70 hover:bg-[rgba(255,255,255,0.06)] transition-all"
-                            title="Sign out"
-                        >
-                            <LogOut size={16} />
-                        </button>
-                    </div>
-                </div>
-            </header>
-
-            {/* Main Content */}
-            <main className="relative z-10 max-w-6xl mx-auto px-6 py-10">
-                <motion.div
-                    className="text-center mb-10"
+            <div className="dash-content">
+                {/* Header */}
+                <motion.header
+                    className="dash-header"
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
                 >
-                    <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">
-                        Your Workspaces
-                    </h2>
-                    <p className="text-white/40 text-sm max-w-md mx-auto">
-                        Create a workspace, invite your team, and start collaborating.
-                    </p>
-                </motion.div>
-
-                {/* Workspace Grid */}
-                {isLoading ? (
-                    <div className="flex justify-center py-20">
-                        <motion.div
-                            className="w-8 h-8 border-2 border-brand-500/30 border-t-brand-400 rounded-full"
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                        />
-                    </div>
-                ) : workspaces.length === 0 ? (
-                    <motion.div className="text-center py-20" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                        <GlassPanel variant="flat" padding="lg" className="max-w-md mx-auto">
-                            <div className="text-brand-400/40 mb-4 flex justify-center">
-                                <Layers size={48} />
-                            </div>
-                            <h3 className="text-lg font-semibold text-white/70 mb-2">No workspaces yet</h3>
-                            <p className="text-sm text-white/30 mb-6">
-                                Create your first workspace or join one with an invite link.
+                    <div className="dash-header-left">
+                        <Image src="/mascot.png" alt="Mascot" width={48} height={48} />
+                        <div>
+                            <h1 className="dash-title gradient-text-candy">BRUTSTeamPad</h1>
+                            <p className="dash-subtitle">
+                                Hey {user?.username || 'there'}! 👋
                             </p>
-                            <Button
-                                variant="neon"
-                                size="lg"
-                                icon={<Plus size={16} />}
-                                onClick={() => setShowModal(true)}
-                                className="mx-auto"
-                            >
-                                Create Workspace
-                            </Button>
-                        </GlassPanel>
-                    </motion.div>
-                ) : (
-                    <motion.div
-                        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
+                        </div>
+                    </div>
+                    <button
+                        className="btn-logout"
+                        onClick={() => { logout(); router.push('/login'); }}
                     >
-                        {workspaces.map((ws, i) => (
-                            <motion.div
-                                key={ws.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: i * 0.06 }}
-                            >
-                                <GlassPanel
-                                    variant="elevated"
-                                    padding="md"
-                                    neonBorder="brand"
-                                    className="group hover:border-brand-400/40 transition-all duration-300"
-                                >
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-600/30 to-neon-purple/30 flex items-center justify-center border border-brand-500/20">
-                                                <Layers size={18} className="text-brand-400" />
-                                            </div>
-                                            <div>
-                                                <h3 className="text-base font-semibold text-white truncate max-w-[180px]">
-                                                    {ws.name}
-                                                </h3>
-                                                <div className="flex items-center gap-2 mt-0.5">
-                                                    <span className="text-[10px] text-white/25">
-                                                        {new Date(ws.created_at).toLocaleDateString()}
-                                                    </span>
-                                                    {ws.owner_id === user?.id && (
-                                                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-brand-600/20 text-brand-300 border border-brand-500/20">
-                                                            Owner
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
+                        <LogOut size={16} />
+                        Sign Out
+                    </button>
+                </motion.header>
 
-                                    {/* Invite Code */}
-                                    <div className="flex items-center gap-2 mb-3 px-3 py-2 rounded-lg bg-[rgba(255,255,255,0.04)] border border-white/8">
-                                        <KeyRound size={12} className="text-brand-400/60 flex-shrink-0" />
-                                        <span className="font-mono text-sm text-brand-300 tracking-wider flex-1">
-                                            {ws.team_key}
-                                        </span>
-                                        <button
-                                            onClick={() => copyKey(ws.team_key, ws.id)}
-                                            className="text-white/30 hover:text-white/70 transition-colors p-1"
-                                            title="Copy invite code"
-                                        >
-                                            {copiedId === ws.id ? (
-                                                <Check size={14} className="text-green-400" />
-                                            ) : (
-                                                <Copy size={14} />
-                                            )}
-                                        </button>
-                                    </div>
-
-                                    {/* Actions */}
-                                    <div className="flex gap-2 mb-3">
-                                        <button
-                                            onClick={() => copyInviteLink(ws.team_key, ws.id)}
-                                            className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-[rgba(255,255,255,0.04)] hover:bg-[rgba(255,255,255,0.08)] border border-white/8 text-xs text-white/40 hover:text-white/70 transition-all"
-                                        >
-                                            {copiedId === `link-${ws.id}` ? (
-                                                <><Check size={12} className="text-green-400" /> Copied!</>
-                                            ) : (
-                                                <><Link2 size={12} /> Copy Invite Link</>
-                                            )}
-                                        </button>
-                                    </div>
-
-                                    <Button
-                                        variant="glass"
-                                        size="sm"
-                                        className="w-full group-hover:bg-[rgba(255,255,255,0.12)]"
-                                        icon={<ExternalLink size={14} />}
-                                        onClick={() => router.push(`/workspace/${ws.id}`)}
-                                        id={`open-workspace-${ws.id}`}
-                                    >
-                                        Open Workspace
-                                    </Button>
-                                </GlassPanel>
-                            </motion.div>
-                        ))}
-
-                        {/* Create new card */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: workspaces.length * 0.06 }}
+                {/* Workspace grid */}
+                <motion.section
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                >
+                    <div className="section-header">
+                        <h2>Your Workspaces</h2>
+                        <motion.button
+                            className="btn-create"
+                            onClick={() => setShowCreateModal(true)}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
                         >
+                            <Plus size={18} />
+                            New Workspace
+                        </motion.button>
+                    </div>
+
+                    {isLoading ? (
+                        <div className="ws-grid">
+                            {[1, 2, 3].map((i) => (
+                                <div key={i} className="ws-card-skeleton shimmer" />
+                            ))}
+                        </div>
+                    ) : workspaces.length === 0 ? (
+                        <motion.div
+                            className="empty-state"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                        >
+                            <Image src="/mascot.png" alt="" width={80} height={80} style={{ opacity: 0.6 }} />
+                            <h3>No workspaces yet!</h3>
+                            <p>Create your first workspace to start collaborating ✨</p>
                             <button
-                                onClick={() => setShowModal(true)}
-                                className="w-full h-full min-h-[200px] rounded-2xl border-2 border-dashed border-white/10 hover:border-brand-500/40 bg-[rgba(255,255,255,0.02)] hover:bg-[rgba(255,255,255,0.05)] transition-all duration-300 flex flex-col items-center justify-center gap-3 group"
+                                className="btn-create"
+                                onClick={() => setShowCreateModal(true)}
                             >
-                                <div className="w-12 h-12 rounded-full bg-brand-600/10 group-hover:bg-brand-600/20 flex items-center justify-center transition-colors">
-                                    <Plus size={22} className="text-brand-400/50 group-hover:text-brand-400" />
-                                </div>
-                                <span className="text-sm text-white/30 group-hover:text-white/60 font-medium">
-                                    New Workspace
-                                </span>
+                                <Sparkles size={16} />
+                                Create Workspace
                             </button>
                         </motion.div>
-                    </motion.div>
-                )}
-            </main>
+                    ) : (
+                        <div className="ws-grid">
+                            <AnimatePresence>
+                                {workspaces.map((ws, i) => (
+                                    <motion.div
+                                        key={ws.id}
+                                        className="ws-card"
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: i * 0.1 }}
+                                        whileHover={{ y: -4, scale: 1.02 }}
+                                    >
+                                        <div className="ws-card-header">
+                                            <h3>{ws.name}</h3>
+                                            {ws.role === 'owner' && (
+                                                <span className="owner-badge">
+                                                    <Crown size={12} />
+                                                    Owner
+                                                </span>
+                                            )}
+                                        </div>
 
-            {/* Create Workspace Modal */}
+                                        <div className="ws-card-code">
+                                            <code>{ws.team_key}</code>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); copyInviteLink(ws.team_key); }}
+                                                className="btn-copy"
+                                                title="Copy invite link"
+                                            >
+                                                {copied === ws.team_key ? (
+                                                    <span className="copy-done">Copied! ✓</span>
+                                                ) : (
+                                                    <>
+                                                        <Link2 size={13} />
+                                                        <Copy size={13} />
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+
+                                        <button
+                                            className="btn-enter"
+                                            onClick={() => router.push(`/workspace/${ws.id}`)}
+                                        >
+                                            Enter Workspace
+                                            <ArrowRight size={16} />
+                                        </button>
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
+                        </div>
+                    )}
+                </motion.section>
+            </div>
+
+            {/* Create Modal */}
             <AnimatePresence>
-                {showModal && (
+                {showCreateModal && (
                     <motion.div
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        className="modal-overlay"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
+                        onClick={() => setShowCreateModal(false)}
                     >
                         <motion.div
-                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                            onClick={() => { setShowModal(false); setError(''); setNewName(''); }}
-                        />
-                        <motion.div
-                            className="relative z-10 w-full max-w-md"
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            className="modal-card"
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            onClick={(e) => e.stopPropagation()}
                         >
-                            <GlassPanel variant="elevated" padding="lg" neonBorder="brand">
-                                <div className="flex items-center justify-between mb-6">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-brand-600/20 flex items-center justify-center">
-                                            <Sparkles size={18} className="text-brand-400" />
-                                        </div>
-                                        <div>
-                                            <h2 className="text-lg font-bold text-white">Create Workspace</h2>
-                                            <p className="text-xs text-white/40">An invite code will be generated</p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => { setShowModal(false); setError(''); setNewName(''); }}
-                                        className="text-white/30 hover:text-white/70 transition-colors p-1"
-                                    >
-                                        <X size={18} />
-                                    </button>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <div>
-                                        <label className="block text-xs text-white/40 mb-2 font-medium">
-                                            Workspace Name
-                                        </label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g., FOSS Hack Team"
-                                            value={newName}
-                                            onChange={(e) => { setNewName(e.target.value); setError(''); }}
-                                            onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-                                            className="glass-input text-base"
-                                            id="workspace-name-input"
-                                            autoFocus
-                                        />
-                                    </div>
-                                    {error && (
-                                        <motion.p className="text-xs text-red-400" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                                            {error}
-                                        </motion.p>
-                                    )}
-                                    <div className="flex gap-3">
-                                        <Button variant="ghost" size="md" className="flex-1"
-                                            onClick={() => { setShowModal(false); setError(''); setNewName(''); }}>
-                                            Cancel
-                                        </Button>
-                                        <Button variant="neon" size="md" className="flex-1"
-                                            onClick={handleCreate} isLoading={creating}
-                                            icon={<Sparkles size={14} />} id="confirm-create-btn">
-                                            Create
-                                        </Button>
-                                    </div>
-                                </div>
-                            </GlassPanel>
+                            <h3>Create New Workspace ✨</h3>
+                            <input
+                                type="text"
+                                placeholder="Enter workspace name..."
+                                value={newName}
+                                onChange={(e) => setNewName(e.target.value)}
+                                className="modal-input"
+                                onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+                                autoFocus
+                            />
+                            <div className="modal-actions">
+                                <button
+                                    className="btn-cancel"
+                                    onClick={() => setShowCreateModal(false)}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    className="btn-create"
+                                    onClick={handleCreate}
+                                    disabled={creating || !newName.trim()}
+                                >
+                                    {creating ? 'Creating...' : 'Create'}
+                                </button>
+                            </div>
                         </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            <style jsx>{`
+                .dashboard {
+                    min-height: 100vh;
+                    position: relative;
+                    overflow: hidden;
+                    background: #0a0a1a;
+                }
+                .liquid-bg {
+                    position: fixed; inset: 0; overflow: hidden; z-index: 0;
+                }
+                .blob {
+                    position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.35;
+                }
+                .blob-1 {
+                    width: 500px; height: 500px;
+                    background: radial-gradient(circle, #ff6b9d 0%, #c44dff 50%, transparent 70%);
+                    top: -150px; left: -100px;
+                    animation: blobFloat1 8s ease-in-out infinite;
+                }
+                .blob-2 {
+                    width: 400px; height: 400px;
+                    background: radial-gradient(circle, #4cc9f0 0%, #6366f1 50%, transparent 70%);
+                    bottom: -100px; right: -80px;
+                    animation: blobFloat2 10s ease-in-out infinite;
+                }
+                .blob-3 {
+                    width: 350px; height: 350px;
+                    background: radial-gradient(circle, #06d6a0 0%, #ffd166 50%, transparent 70%);
+                    top: 40%; left: 50%;
+                    animation: blobFloat3 12s ease-in-out infinite;
+                }
+                @keyframes blobFloat1 {
+                    0%, 100% { transform: translate(0, 0) scale(1); }
+                    33% { transform: translate(30px, -50px) scale(1.1); }
+                    66% { transform: translate(-20px, 20px) scale(0.9); }
+                }
+                @keyframes blobFloat2 {
+                    0%, 100% { transform: translate(0, 0) scale(1); }
+                    33% { transform: translate(-40px, 30px) scale(1.15); }
+                    66% { transform: translate(25px, -40px) scale(0.85); }
+                }
+                @keyframes blobFloat3 {
+                    0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+                    50% { transform: translate(-30px, 40px) rotate(180deg) scale(1.2); }
+                }
+                .dash-content {
+                    position: relative; z-index: 10;
+                    max-width: 960px; margin: 0 auto; padding: 32px 24px;
+                }
+                .dash-header {
+                    display: flex; align-items: center; justify-content: space-between;
+                    margin-bottom: 40px; padding: 20px 24px;
+                    background: rgba(255,255,255,0.05);
+                    border: 1px solid rgba(255,255,255,0.08);
+                    border-radius: 20px; backdrop-filter: blur(20px);
+                }
+                .dash-header-left {
+                    display: flex; align-items: center; gap: 14px;
+                }
+                .dash-title {
+                    font-size: 1.5rem; font-weight: 800; margin: 0;
+                    background: linear-gradient(135deg, #ff6b9d, #c44dff, #4cc9f0);
+                    background-size: 300% 300%;
+                    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+                    background-clip: text; animation: gradientShift 4s ease infinite;
+                }
+                @keyframes gradientShift {
+                    0%, 100% { background-position: 0% 50%; }
+                    50% { background-position: 100% 50%; }
+                }
+                .dash-subtitle {
+                    margin: 2px 0 0; color: rgba(255,255,255,0.5); font-size: 0.9rem;
+                }
+                .btn-logout {
+                    display: flex; align-items: center; gap: 6px;
+                    padding: 10px 18px; border-radius: 12px;
+                    border: 1px solid rgba(255,255,255,0.1);
+                    background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.6);
+                    cursor: pointer; font-size: 0.85rem; transition: all 0.3s;
+                }
+                .btn-logout:hover {
+                    background: rgba(255, 107, 157, 0.15); color: #ff6b9d;
+                    border-color: rgba(255, 107, 157, 0.3);
+                }
+                .section-header {
+                    display: flex; align-items: center; justify-content: space-between;
+                    margin-bottom: 20px;
+                }
+                .section-header h2 {
+                    color: rgba(255,255,255,0.8); font-size: 1.2rem; margin: 0;
+                }
+                .btn-create {
+                    display: flex; align-items: center; gap: 8px;
+                    padding: 12px 20px; border: none; border-radius: 14px;
+                    background: linear-gradient(135deg, #c44dff, #ff6b9d);
+                    color: white; font-weight: 600; font-size: 0.9rem;
+                    cursor: pointer; transition: all 0.3s;
+                }
+                .btn-create:hover {
+                    box-shadow: 0 6px 25px rgba(196, 77, 255, 0.4);
+                    transform: translateY(-1px);
+                }
+                .btn-create:disabled { opacity: 0.6; cursor: not-allowed; }
+                .ws-grid {
+                    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                    gap: 16px;
+                }
+                .ws-card {
+                    background: rgba(255,255,255,0.05);
+                    border: 1px solid rgba(255,255,255,0.08);
+                    border-radius: 20px; padding: 24px;
+                    backdrop-filter: blur(10px); cursor: pointer;
+                    transition: all 0.3s;
+                }
+                .ws-card:hover {
+                    border-color: rgba(196, 77, 255, 0.3);
+                    box-shadow: 0 8px 30px rgba(196, 77, 255, 0.15);
+                }
+                .ws-card-header {
+                    display: flex; align-items: center; justify-content: space-between;
+                    margin-bottom: 12px;
+                }
+                .ws-card-header h3 {
+                    margin: 0; font-size: 1.1rem; color: white; font-weight: 600;
+                }
+                .owner-badge {
+                    display: flex; align-items: center; gap: 4px;
+                    padding: 3px 10px; border-radius: 8px; font-size: 0.7rem;
+                    background: rgba(255, 209, 102, 0.15); color: #ffd166;
+                    border: 1px solid rgba(255, 209, 102, 0.3);
+                }
+                .ws-card-code {
+                    display: flex; align-items: center; justify-content: space-between;
+                    padding: 8px 12px; border-radius: 10px;
+                    background: rgba(255,255,255,0.04); margin-bottom: 16px;
+                }
+                .ws-card-code code {
+                    font-size: 0.85rem; color: #c44dff; font-weight: 600;
+                }
+                .btn-copy {
+                    display: flex; align-items: center; gap: 4px;
+                    background: none; border: none; color: rgba(255,255,255,0.4);
+                    cursor: pointer; font-size: 0.75rem; transition: color 0.3s;
+                }
+                .btn-copy:hover { color: white; }
+                .copy-done { color: #06d6a0; font-size: 0.75rem; }
+                .btn-enter {
+                    width: 100%; padding: 12px; border: none; border-radius: 12px;
+                    background: rgba(255,255,255,0.06); color: white;
+                    display: flex; align-items: center; justify-content: center; gap: 8px;
+                    cursor: pointer; font-weight: 500; font-size: 0.9rem;
+                    transition: all 0.3s;
+                }
+                .btn-enter:hover {
+                    background: linear-gradient(135deg, rgba(196,77,255,0.2), rgba(255,107,157,0.2));
+                }
+                .empty-state {
+                    text-align: center; padding: 60px 20px;
+                    background: rgba(255,255,255,0.03); border-radius: 24px;
+                    border: 1px dashed rgba(255,255,255,0.1);
+                }
+                .empty-state h3 { color: white; margin: 16px 0 8px; }
+                .empty-state p { color: rgba(255,255,255,0.5); margin-bottom: 20px; }
+                .ws-card-skeleton {
+                    height: 160px; border-radius: 20px;
+                    background: rgba(255,255,255,0.05);
+                }
+                .modal-overlay {
+                    position: fixed; inset: 0; z-index: 100;
+                    background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+                    display: flex; align-items: center; justify-content: center;
+                }
+                .modal-card {
+                    background: rgba(20,20,35,0.95);
+                    border: 1px solid rgba(255,255,255,0.1);
+                    border-radius: 24px; padding: 32px; max-width: 400px; width: 90%;
+                    backdrop-filter: blur(20px);
+                }
+                .modal-card h3 { color: white; margin: 0 0 20px; font-size: 1.2rem; }
+                .modal-input {
+                    width: 100%; padding: 14px 16px; border-radius: 14px;
+                    border: 2px solid rgba(255,255,255,0.1);
+                    background: rgba(255,255,255,0.05); color: white;
+                    font-size: 1rem; outline: none; margin-bottom: 16px;
+                    transition: border-color 0.3s;
+                }
+                .modal-input:focus { border-color: rgba(196, 77, 255, 0.5); }
+                .modal-input::placeholder { color: rgba(255,255,255,0.3); }
+                .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+                .btn-cancel {
+                    padding: 10px 20px; border-radius: 12px;
+                    border: 1px solid rgba(255,255,255,0.1);
+                    background: transparent; color: rgba(255,255,255,0.6);
+                    cursor: pointer; font-size: 0.9rem;
+                }
+                .dash-loading {
+                    min-height: 100vh; display: flex; flex-direction: column;
+                    align-items: center; justify-content: center;
+                    background: #0a0a1a; color: rgba(255,255,255,0.4);
+                }
+                .loading-blob {
+                    width: 60px; height: 60px; border-radius: 50%;
+                    background: linear-gradient(135deg, #c44dff, #ff6b9d);
+                    animation: pulse 1.5s ease-in-out infinite;
+                    margin-bottom: 16px;
+                }
+                @keyframes pulse {
+                    0%, 100% { transform: scale(1); opacity: 1; }
+                    50% { transform: scale(1.2); opacity: 0.6; }
+                }
+                :global(.shimmer) {
+                    animation: shimmer 1.5s ease-in-out infinite;
+                }
+                @keyframes shimmer {
+                    0%, 100% { opacity: 0.3; }
+                    50% { opacity: 0.6; }
+                }
+            `}</style>
         </div>
     );
 }

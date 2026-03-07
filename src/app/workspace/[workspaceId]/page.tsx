@@ -1,106 +1,92 @@
 /* ============================================
-   BRUTSTeamPad — Workspace Editor Page
-   /workspace/[workspaceId] — membership-gated
+   BRUTSTeamPad — Workspace Page
+   Auth check + workspace layout loader
    ============================================ */
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { supabase, authFetch } from '@/lib/supabase';
 import { useAuthStore } from '@/lib/store';
+import { authFetch } from '@/lib/supabase';
 import { WorkspaceLayout } from '@/components/workspace/WorkspaceLayout';
-import { Logo } from '@/components/ui/Logo';
-import type { Profile } from '@/lib/types';
 
 export default function WorkspacePage() {
     const params = useParams();
     const router = useRouter();
-    const workspaceId = params.workspaceId as string;
-    const { user, isAuthenticated, setUser, setWorkspace } = useAuthStore();
-    const [checking, setChecking] = useState(true);
+    const workspaceId = params?.workspaceId as string;
+    const { user, isAuthenticated, setUser, setWorkspace, loadFromStorage } = useAuthStore();
     const [authorized, setAuthorized] = useState(false);
+    const [checking, setChecking] = useState(true);
 
     useEffect(() => {
-        async function checkAccess() {
-            // 1. Check auth
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
-                router.replace('/login');
-                return;
-            }
+        loadFromStorage();
+    }, [loadFromStorage]);
 
-            // Load profile if not set
-            if (!user) {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', session.user.id)
-                    .single();
+    useEffect(() => {
+        if (!isAuthenticated && !checking) {
+            router.push('/login');
+            return;
+        }
 
-                if (profile) {
-                    setUser(profile as Profile);
-                } else {
-                    setUser({
-                        id: session.user.id,
-                        email: session.user.email || '',
-                        username: session.user.email?.split('@')[0] || 'User',
-                        avatar_url: null,
-                        created_at: new Date().toISOString(),
-                    });
-                }
-            }
+        if (!isAuthenticated || !workspaceId) return;
 
-            // 2. Check membership
+        const checkAccess = async () => {
             try {
-                const res = await authFetch(`/api/workspace/members?workspaceId=${workspaceId}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.isMember) {
-                        // Load workspace data
-                        const wsRes = await authFetch(`/api/workspace?id=${workspaceId}`);
-                        if (wsRes.ok) {
-                            const wsData = await wsRes.json();
-                            if (wsData.workspace) {
-                                setWorkspace(wsData.workspace);
-                            }
-                        }
-                        setAuthorized(true);
-                    } else {
-                        router.replace('/');
-                    }
+                const res = await authFetch(
+                    `/api/workspace/members?workspaceId=${workspaceId}`
+                );
+                const data = await res.json();
+
+                if (data.isMember) {
+                    // Fetch workspace details
+                    const wsRes = await authFetch('/api/workspace');
+                    const wsData = await wsRes.json();
+                    const ws = wsData.workspaces?.find(
+                        (w: any) => w.id === workspaceId
+                    );
+                    if (ws) setWorkspace(ws);
+                    setAuthorized(true);
                 } else {
-                    router.replace('/');
+                    router.push('/');
                 }
             } catch {
-                router.replace('/');
+                router.push('/');
             } finally {
                 setChecking(false);
             }
-        }
+        };
 
         checkAccess();
-    }, [workspaceId, router, user, setUser, setWorkspace]);
+    }, [isAuthenticated, workspaceId, router, setWorkspace, loadFromStorage, checking]);
 
-    if (checking) {
+    if (checking || !authorized) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-mesh">
-                <div className="text-center">
-                    <div className="flex justify-center mb-6">
-                        <Logo size="lg" />
-                    </div>
-                    <motion.div
-                        className="w-8 h-8 border-2 border-brand-500/30 border-t-brand-400 rounded-full mx-auto mb-4"
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            <div
+                style={{
+                    minHeight: '100vh',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: '#0a0a1a',
+                    color: 'rgba(255,255,255,0.4)',
+                }}
+            >
+                <div style={{ textAlign: 'center' }}>
+                    <div
+                        style={{
+                            width: 50,
+                            height: 50,
+                            borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #c44dff, #ff6b9d)',
+                            margin: '0 auto 16px',
+                            animation: 'pulse 1.5s ease-in-out infinite',
+                        }}
                     />
-                    <p className="text-white/40 text-sm">Loading workspace...</p>
+                    <p>Loading workspace...</p>
                 </div>
             </div>
         );
     }
-
-    if (!authorized) return null;
 
     return <WorkspaceLayout />;
 }
