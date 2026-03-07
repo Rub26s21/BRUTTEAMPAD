@@ -14,35 +14,25 @@ import Table from '@tiptap/extension-table';
 import TableRow from '@tiptap/extension-table-row';
 import TableCell from '@tiptap/extension-table-cell';
 import TableHeader from '@tiptap/extension-table-header';
-import Collaboration from '@tiptap/extension-collaboration';
-import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
 import { motion } from 'framer-motion';
 
 import { EditorToolbar } from '@/components/editor/EditorToolbar';
-import { LiveUserBar } from '@/components/cursors/LiveUserBar';
-import { useRealtime } from '@/hooks/useRealtime';
 import { useAutosave } from '@/hooks/useAutosave';
 import {
     useAuthStore,
     useDocumentStore,
     useEditorStateStore,
 } from '@/lib/store';
-import { uploadImage } from '@/lib/supabase-api';
+import { uploadImage, getDocument } from '@/lib/supabase-api';
 
 export function DocumentEditor() {
     const { user, cursorColor, workspace } = useAuthStore();
     const { activeDocument } = useDocumentStore();
-    const { setWordCount, setCharacterCount, setEditing } =
+    const { wordCount, characterCount, setWordCount, setCharacterCount, setEditing } =
         useEditorStateStore();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const documentId = activeDocument?.id || null;
-
-    // Realtime collaboration via Yjs
-    const { ydoc, provider } = useRealtime({
-        documentId,
-        enabled: !!documentId,
-    });
 
     // Autosave to database
     const { updateContent, forceSave } = useAutosave({
@@ -51,11 +41,10 @@ export function DocumentEditor() {
         enabled: !!documentId,
     });
 
-    // TipTap editor extensions
+    // TipTap editor extensions (NO Yjs to avoid WebSocket dependency)
     const extensions = useMemo(() => {
-        const exts: any[] = [
+        return [
             StarterKit.configure({
-                history: false, // Disable — Yjs handles undo/redo
                 codeBlock: {
                     HTMLAttributes: {
                         class: 'language-plaintext',
@@ -80,25 +69,7 @@ export function DocumentEditor() {
             TableCell,
             TableHeader,
         ];
-
-        // Add collaboration extensions when Yjs is connected
-        if (ydoc && provider) {
-            exts.push(
-                Collaboration.configure({
-                    document: ydoc,
-                }),
-                CollaborationCursor.configure({
-                    provider: provider,
-                    user: {
-                        name: user?.username || user?.email?.split('@')[0] || 'Anonymous',
-                        color: cursorColor,
-                    },
-                })
-            );
-        }
-
-        return exts;
-    }, [ydoc, provider, user, cursorColor]);
+    }, []);
 
     // Initialize TipTap editor
     const editor = useEditor(
@@ -129,6 +100,26 @@ export function DocumentEditor() {
         },
         [extensions]
     );
+
+    // Load document content when active document changes
+    useEffect(() => {
+        if (!editor || !documentId) return;
+
+        const loadContent = async () => {
+            try {
+                const doc = await getDocument(documentId);
+                if (doc?.content) {
+                    editor.commands.setContent(doc.content);
+                } else {
+                    editor.commands.setContent('');
+                }
+            } catch {
+                editor.commands.setContent('');
+            }
+        };
+
+        loadContent();
+    }, [editor, documentId]);
 
     // Handle image upload
     const handleImageUpload = useCallback(() => {
@@ -216,7 +207,7 @@ export function DocumentEditor() {
                     </h3>
                     <p className="text-sm text-white/15 max-w-xs">
                         Choose a document from the sidebar or create a new one to start
-                        collaborating
+                        editing
                     </p>
                 </motion.div>
             </div>
@@ -231,9 +222,6 @@ export function DocumentEditor() {
                     {activeDocument.title}
                 </h1>
             </div>
-
-            {/* Live user bar */}
-            <LiveUserBar />
 
             {/* Toolbar */}
             <EditorToolbar editor={editor} onImageUpload={handleImageUpload} />
@@ -263,16 +251,11 @@ export function DocumentEditor() {
                 transition={{ delay: 0.3 }}
             >
                 <div className="flex items-center gap-4">
-                    <span>
-                        {useEditorStateStore.getState().wordCount} words
-                    </span>
-                    <span>
-                        {useEditorStateStore.getState().characterCount} characters
-                    </span>
+                    <span>{wordCount} words</span>
+                    <span>{characterCount} characters</span>
                 </div>
                 <div className="flex items-center gap-3">
                     <span>Autosave: 10s</span>
-                    <span className="text-neon-green/50">● Connected</span>
                 </div>
             </motion.div>
         </div>

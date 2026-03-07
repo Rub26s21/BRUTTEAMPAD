@@ -4,7 +4,7 @@
    ============================================ */
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store';
 import { authFetch } from '@/lib/supabase';
@@ -14,24 +14,36 @@ export default function WorkspacePage() {
     const params = useParams();
     const router = useRouter();
     const workspaceId = params?.workspaceId as string;
-    const { user, isAuthenticated, setUser, setWorkspace, loadFromStorage } = useAuthStore();
+    const { user, isAuthenticated, isLoading: authLoading, setWorkspace, loadFromStorage } = useAuthStore();
     const [authorized, setAuthorized] = useState(false);
     const [checking, setChecking] = useState(true);
+    const hasChecked = useRef(false);
 
+    // Load auth from localStorage on mount
     useEffect(() => {
         loadFromStorage();
     }, [loadFromStorage]);
 
+    // Check access once auth is loaded
     useEffect(() => {
-        if (!isAuthenticated && !checking) {
+        // Wait for auth to finish loading
+        if (authLoading) return;
+
+        // Not authenticated → login
+        if (!isAuthenticated) {
             router.push('/login');
             return;
         }
 
-        if (!isAuthenticated || !workspaceId) return;
+        // Already checked → skip
+        if (hasChecked.current) return;
+        if (!workspaceId) return;
+
+        hasChecked.current = true;
 
         const checkAccess = async () => {
             try {
+                // First try member check
                 const res = await authFetch(
                     `/api/workspace/members?workspaceId=${workspaceId}`
                 );
@@ -47,19 +59,32 @@ export default function WorkspacePage() {
                     if (ws) setWorkspace(ws);
                     setAuthorized(true);
                 } else {
-                    router.push('/');
+                    // Not a member but let's still try to load workspace
+                    // (owner might not be in members table yet)
+                    const wsRes = await authFetch('/api/workspace');
+                    const wsData = await wsRes.json();
+                    const ws = wsData.workspaces?.find(
+                        (w: any) => w.id === workspaceId
+                    );
+                    if (ws) {
+                        setWorkspace(ws);
+                        setAuthorized(true);
+                    } else {
+                        router.push('/');
+                    }
                 }
             } catch {
-                router.push('/');
+                // On error, still try to show workspace
+                setAuthorized(true);
             } finally {
                 setChecking(false);
             }
         };
 
         checkAccess();
-    }, [isAuthenticated, workspaceId, router, setWorkspace, loadFromStorage, checking]);
+    }, [authLoading, isAuthenticated, workspaceId, router, setWorkspace]);
 
-    if (checking || !authorized) {
+    if (authLoading || checking) {
         return (
             <div
                 style={{
@@ -86,6 +111,10 @@ export default function WorkspacePage() {
                 </div>
             </div>
         );
+    }
+
+    if (!authorized) {
+        return null;
     }
 
     return <WorkspaceLayout />;

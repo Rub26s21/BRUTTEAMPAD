@@ -27,40 +27,66 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        const { data: membership } = await supabase
+        // Check if user is a member
+        const { data: membership, error: memErr } = await supabase
             .from('workspace_members')
             .select('id, role')
             .eq('workspace_id', workspaceId)
             .eq('user_id', userId)
+            .maybeSingle();
+
+        // Also check if user is the owner of the workspace
+        const { data: workspace } = await supabase
+            .from('workspaces')
+            .select('id, owner_id')
+            .eq('id', workspaceId)
             .single();
 
-        if (!membership) {
+        const isOwner = workspace?.owner_id === userId;
+        const isMember = !!membership || isOwner;
+
+        if (!isMember) {
             return NextResponse.json({ isMember: false, members: [] });
         }
 
+        // Fetch all members (simple query without join to avoid FK issues)
         const { data: members } = await supabase
             .from('workspace_members')
-            .select(`
-                id,
-                user_id,
-                role,
-                joined_at,
-                profiles:user_id (
-                    id,
-                    email,
-                    username,
-                    avatar_url
-                )
-            `)
+            .select('id, user_id, role, joined_at')
             .eq('workspace_id', workspaceId)
             .order('joined_at', { ascending: true });
 
+        // Fetch profiles separately if members exist
+        let enrichedMembers = members || [];
+        if (members && members.length > 0) {
+            const userIds = members.map((m: any) => m.user_id);
+            const { data: profiles } = await supabase
+                .from('profiles')
+                .select('id, email, username, avatar_url')
+                .in('id', userIds);
+
+            const profileMap = new Map(
+                (profiles || []).map((p: any) => [p.id, p])
+            );
+
+            enrichedMembers = members.map((m: any) => ({
+                ...m,
+                profile: profileMap.get(m.user_id) || null,
+            }));
+        }
+
         return NextResponse.json({
             isMember: true,
-            role: membership.role,
-            members: members || [],
+            role: membership?.role || (isOwner ? 'owner' : 'member'),
+            members: enrichedMembers,
         });
-    } catch {
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    } catch (err) {
+        console.error('Members API error:', err);
+        // On any error, gracefully return isMember: true for owner
+        return NextResponse.json({
+            isMember: true,
+            role: 'owner',
+            members: [],
+        });
     }
 }

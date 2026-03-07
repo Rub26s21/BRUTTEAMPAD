@@ -9,13 +9,11 @@ import { TopNavigation } from '@/components/workspace/TopNavigation';
 import { WorkspaceSidebar } from '@/components/workspace/WorkspaceSidebar';
 import { DocumentEditor } from '@/components/editor/DocumentEditor';
 import { SuggestionPanel } from '@/components/workspace/SuggestionPanel';
-import { OnlineUsersList } from '@/components/workspace/OnlineUsersList';
 import { useUIStore, useSuggestionStore, useAuthStore } from '@/lib/store';
 
 export function WorkspaceLayout() {
     const { sidebarOpen } = useUIStore();
     const { isPanelOpen } = useSuggestionStore();
-    const { workspace } = useAuthStore();
 
     return (
         <div className="h-screen flex flex-col">
@@ -38,13 +36,6 @@ export function WorkspaceLayout() {
                             <div className="flex-1 overflow-hidden">
                                 <WorkspaceSidebar />
                             </div>
-
-                            {/* Online users */}
-                            {workspace && (
-                                <div className="border-t border-[rgba(255,255,255,0.06)]">
-                                    <OnlineUsersList workspaceId={workspace.id} />
-                                </div>
-                            )}
                         </motion.aside>
                     )}
                 </AnimatePresence>

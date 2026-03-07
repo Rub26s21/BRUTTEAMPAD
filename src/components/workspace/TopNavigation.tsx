@@ -9,17 +9,14 @@ import {
     PanelLeftClose,
     PanelLeftOpen,
     MessageSquare,
-    Wifi,
-    WifiOff,
     Save,
     LogOut,
+    Home,
 } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
-import { AvatarStack } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import {
     useAuthStore,
-    useCollaborationStore,
     useEditorStateStore,
     useUIStore,
     useSuggestionStore,
@@ -29,7 +26,6 @@ export function TopNavigation() {
     const router = useRouter();
     const { workspace, user, logout } = useAuthStore();
     const displayName = user?.username || user?.email?.split('@')[0] || null;
-    const { connectedUsers, isConnected } = useCollaborationStore();
     const { isSaving, lastSaved } = useEditorStateStore();
     const { sidebarOpen, toggleSidebar } = useUIStore();
     const { togglePanel: toggleSuggestions } = useSuggestionStore();
@@ -88,38 +84,6 @@ export function TopNavigation() {
 
             {/* Right section */}
             <div className="flex items-center gap-3">
-                {/* Connection indicator */}
-                <div className="flex items-center gap-1.5">
-                    {isConnected ? (
-                        <Wifi size={14} className="text-neon-green" />
-                    ) : (
-                        <WifiOff size={14} className="text-red-400" />
-                    )}
-                    <span className="text-xs text-white/40">
-                        {isConnected ? 'Connected' : 'Offline'}
-                    </span>
-                </div>
-
-                {/* Live users */}
-                {connectedUsers.length > 0 && (
-                    <>
-                        <div className="w-px h-5 bg-white/10" />
-                        <div className="flex items-center gap-2">
-                            <AvatarStack
-                                users={connectedUsers.map((u) => ({
-                                    name: u.name,
-                                    color: u.color,
-                                }))}
-                            />
-                            <span className="text-xs text-white/40">
-                                {connectedUsers.length} online
-                            </span>
-                        </div>
-                    </>
-                )}
-
-                <div className="w-px h-5 bg-white/10" />
-
                 {/* Suggestions */}
                 <Button
                     variant="ghost"
@@ -130,10 +94,20 @@ export function TopNavigation() {
                     Activity
                 </Button>
 
+                <div className="w-px h-5 bg-white/10" />
+
+                {/* Dashboard link */}
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => router.push('/')}
+                    icon={<Home size={14} />}
+                    aria-label="Dashboard"
+                />
+
                 {/* User / Logout */}
                 {displayName && (
                     <>
-                        <div className="w-px h-5 bg-white/10" />
                         <span className="text-xs text-white/50">{displayName}</span>
                         <Button
                             variant="ghost"
