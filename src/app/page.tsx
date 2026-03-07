@@ -37,6 +37,7 @@ export default function Dashboard() {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [newName, setNewName] = useState('');
     const [creating, setCreating] = useState(false);
+    const [createError, setCreateError] = useState('');
     const [copied, setCopied] = useState<string | null>(null);
 
     useEffect(() => {
@@ -70,16 +71,25 @@ export default function Dashboard() {
     const handleCreate = async () => {
         if (!newName.trim()) return;
         setCreating(true);
+        setCreateError('');
         try {
             const res = await authFetch('/api/workspace', {
                 method: 'POST',
                 body: JSON.stringify({ name: newName.trim() }),
             });
+            const data = await res.json();
             if (res.ok) {
                 setShowCreateModal(false);
                 setNewName('');
+                setCreateError('');
                 fetchWorkspaces();
+            } else {
+                setCreateError(data.error || `Failed (${res.status})`);
+                console.error('Create workspace error:', data);
             }
+        } catch (err) {
+            setCreateError('Network error. Please try again.');
+            console.error('Create workspace exception:', err);
         } finally {
             setCreating(false);
         }
@@ -259,6 +269,11 @@ export default function Dashboard() {
                                 onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
                                 autoFocus
                             />
+                            {createError && (
+                                <p style={{ color: '#ff6b9d', fontSize: '0.85rem', margin: '0 0 12px', padding: '8px 12px', background: 'rgba(255,107,157,0.1)', borderRadius: '10px', border: '1px solid rgba(255,107,157,0.2)' }}>
+                                    {createError}
+                                </p>
+                            )}
                             <div className="modal-actions">
                                 <button
                                     className="btn-cancel"
