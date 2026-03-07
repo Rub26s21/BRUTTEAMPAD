@@ -4,7 +4,7 @@
    ============================================ */
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -35,7 +35,7 @@ export default function Dashboard() {
     const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [newName, setNewName] = useState('');
+    const nameInputRef = useRef<HTMLInputElement>(null);
     const [creating, setCreating] = useState(false);
     const [createError, setCreateError] = useState('');
     const [copied, setCopied] = useState<string | null>(null);
@@ -69,27 +69,29 @@ export default function Dashboard() {
     }, [isAuthenticated, fetchWorkspaces]);
 
     const handleCreate = async () => {
-        if (!newName.trim()) return;
+        const wsName = nameInputRef.current?.value?.trim() || '';
+        if (!wsName) {
+            setCreateError('Please enter a workspace name');
+            return;
+        }
         setCreating(true);
         setCreateError('');
         try {
             const res = await authFetch('/api/workspace', {
                 method: 'POST',
-                body: JSON.stringify({ name: newName.trim() }),
+                body: JSON.stringify({ name: wsName }),
             });
             const data = await res.json();
             if (res.ok) {
                 setShowCreateModal(false);
-                setNewName('');
+                if (nameInputRef.current) nameInputRef.current.value = '';
                 setCreateError('');
                 fetchWorkspaces();
             } else {
                 setCreateError(data.error || `Failed (${res.status})`);
-                console.error('Create workspace error:', data);
             }
         } catch (err) {
             setCreateError('Network error. Please try again.');
-            console.error('Create workspace exception:', err);
         } finally {
             setCreating(false);
         }
@@ -261,10 +263,9 @@ export default function Dashboard() {
                         >
                             <h3>Create New Workspace ✨</h3>
                             <input
+                                ref={nameInputRef}
                                 type="text"
                                 placeholder="Enter workspace name..."
-                                value={newName}
-                                onChange={(e) => setNewName(e.target.value)}
                                 className="modal-input"
                                 onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
                                 autoFocus
@@ -277,14 +278,14 @@ export default function Dashboard() {
                             <div className="modal-actions">
                                 <button
                                     className="btn-cancel"
-                                    onClick={() => setShowCreateModal(false)}
+                                    onClick={() => { setShowCreateModal(false); setCreateError(''); }}
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     className="btn-create"
                                     onClick={handleCreate}
-                                    disabled={creating || !newName.trim()}
+                                    disabled={creating}
                                 >
                                     {creating ? 'Creating...' : 'Create'}
                                 </button>
