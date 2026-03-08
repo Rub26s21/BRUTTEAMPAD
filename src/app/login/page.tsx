@@ -166,23 +166,78 @@ export default function LoginPage() {
                     )}
 
                     <motion.button
-                        className="login-btn"
                         onClick={handleLogin}
                         disabled={isLoading}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                        whileHover={{ scale: 1.04, boxShadow: '0 12px 40px rgba(196, 77, 255, 0.5)' }}
+                        whileTap={{ scale: 0.96 }}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5, duration: 0.4 }}
                         id="login-submit"
+                        style={{
+                            width: '100%',
+                            padding: '18px 24px',
+                            border: 'none',
+                            borderRadius: '16px',
+                            background: 'linear-gradient(135deg, #c44dff, #ff6b9d, #ffd166)',
+                            backgroundSize: '200% 200%',
+                            color: 'white',
+                            fontSize: '1.15rem',
+                            fontWeight: 700,
+                            cursor: isLoading ? 'not-allowed' : 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '12px',
+                            marginTop: '12px',
+                            boxShadow: '0 8px 30px rgba(196, 77, 255, 0.35)',
+                            opacity: isLoading ? 0.7 : 1,
+                            animation: 'gradientShift 3s ease infinite',
+                            letterSpacing: '0.5px',
+                            position: 'relative' as const,
+                            overflow: 'hidden',
+                        }}
                     >
+                        {/* Shimmer overlay */}
+                        <motion.div
+                            style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: '-100%',
+                                width: '100%',
+                                height: '100%',
+                                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                                pointerEvents: 'none',
+                            }}
+                            animate={{ left: ['−100%', '200%'] }}
+                            transition={{ duration: 2, repeat: Infinity, repeatDelay: 3, ease: 'easeInOut' }}
+                        />
                         {isLoading ? (
-                            <span className="btn-loading">
-                                <Sparkles size={18} className="spin" />
-                                Logging in...
-                            </span>
+                            <>
+                                <motion.div
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                                >
+                                    <Sparkles size={20} />
+                                </motion.div>
+                                <span>Logging in...</span>
+                            </>
                         ) : (
-                            <span className="btn-content">
-                                <ArrowRight size={18} />
-                                Let&apos;s Go!
-                            </span>
+                            <>
+                                <motion.div
+                                    animate={{ x: [0, 5, 0] }}
+                                    transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                                >
+                                    <ArrowRight size={22} />
+                                </motion.div>
+                                <span>Enter BRUTSTeamPad</span>
+                                <motion.div
+                                    animate={{ scale: [1, 1.3, 1], rotate: [0, 15, 0] }}
+                                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                                >
+                                    <Sparkles size={18} />
+                                </motion.div>
+                            </>
                         )}
                     </motion.button>
                 </motion.div>
